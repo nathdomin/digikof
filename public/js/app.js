@@ -389,9 +389,11 @@ async function handleNewFiles(files, applyScan) {
 }
 
 // ================= Image processing: real "scan" look =================
-// Normaliza a iluminação da página contra um fundo estimado localmente
-// (em vez de só aplicar um filtro de foto), e passa por uma curva de
-// contraste — o mesmo princípio de scanners e apps de digitalização.
+// Corrige a iluminação desigual da foto (sombra de um lado, luz de outro)
+// subtraindo uma estimativa de fundo — não dividindo, que é instável quando
+// o bloco de referência pega texto denso — e depois estica o contraste com
+// base no histograma real da imagem (não uma curva fixa), o que se adapta
+// bem tanto a fotos claras quanto escuras sem lavar nem escurecer o texto.
 function processImage(file, applyScan) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -411,7 +413,7 @@ function processImage(file, applyScan) {
         if (applyScan) applyScanEffect(ctx, w, h);
         canvas.toBlob((blob) => {
           if (blob) resolve(blob); else reject(new Error('Falha ao gerar a imagem.'));
-        }, 'image/jpeg', 0.85);
+        }, 'image/jpeg', 0.88);
       };
       img.src = reader.result;
     };
@@ -423,26 +425,61 @@ function applyScanEffect(ctx, w, h) {
   const imgData = ctx.getImageData(0, 0, w, h);
   const data = imgData.data;
   const n = w * h;
+
   const gray = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const o = i * 4;
     gray[i] = 0.299 * data[o] + 0.587 * data[o + 1] + 0.114 * data[o + 2];
   }
+
+  // Blocos grandes de propósito: assim a média de cada bloco reflete a
+  // iluminação da página, não o texto que está nele.
   const bg = estimateBackground(gray, w, h);
+
+  const corrected = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    const o = i * 4;
-    const ratio = gray[i] / Math.max(bg[i], 8);
-    let v = ratio * 255;
-    v = 255 / (1 + Math.exp(-0.05 * (v - 200)));
+    // Corrige o desnível de iluminação e recentra o fundo perto do branco,
+    // preservando a diferença absoluta (o "quanto mais escuro que o fundo"
+    // do traço do texto) em vez de uma razão, que é o que apaga letras
+    // quando o fundo estimado sai errado.
+    corrected[i] = Math.max(0, Math.min(255, gray[i] - bg[i] + 225));
+  }
+
+  // Contraste ajustado ao histograma real da imagem (não uma curva fixa),
+  // clareando o fundo e escurecendo o texto sem estourar em fotos muito
+  // claras nem apagar detalhes em fotos mais escuras.
+  const low = percentileFromHistogram(corrected, n, 0.01);
+  const high = percentileFromHistogram(corrected, n, 0.97);
+  const range = Math.max(24, high - low);
+
+  for (let i = 0; i < n; i++) {
+    let v = ((corrected[i] - low) / range) * 255;
     v = Math.max(0, Math.min(255, v));
+    const o = i * 4;
     data[o] = v; data[o + 1] = v; data[o + 2] = v;
   }
   ctx.putImageData(imgData, 0, 0);
 }
 
+function percentileFromHistogram(values, n, p) {
+  const hist = new Uint32Array(256);
+  for (let i = 0; i < n; i++) {
+    hist[Math.max(0, Math.min(255, Math.round(values[i])))]++;
+  }
+  const target = p * n;
+  let cum = 0;
+  for (let v = 0; v < 256; v++) {
+    cum += hist[v];
+    if (cum >= target) return v;
+  }
+  return 255;
+}
+
 function estimateBackground(gray, w, h) {
-  const sw = Math.max(10, Math.round(w / 22));
-  const sh = Math.max(10, Math.round(h / 22));
+  // Poucos blocos e bem grandes (~1/9 da imagem) — grandes o bastante para
+  // que nenhum parágrafo de texto consiga puxar a média do bloco pra baixo.
+  const sw = Math.max(6, Math.round(w / 9));
+  const sh = Math.max(6, Math.round(h / 9));
   const small = document.createElement('canvas');
   small.width = sw; small.height = sh;
   const sctx = small.getContext('2d');

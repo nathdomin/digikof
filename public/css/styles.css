@@ -42,6 +42,13 @@ h1,h2,h3{
   }
 }
 
+/* O atributo [hidden] do HTML já faz display:none por padrão, mas regras
+   nossas como .login-screen{display:flex} e #layout{display:grid} têm
+   prioridade sobre o estilo padrão do navegador — então um elemento marcado
+   como hidden continuava ocupando espaço na página. Esta regra garante que
+   hidden sempre vence, não importa que outro display a classe carregue. */
+[hidden]{ display:none !important; }
+
 /* ---------- Topbar ---------- */
 #topbar{
   display:flex;align-items:center;justify-content:space-between;

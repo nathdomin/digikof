@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DigiKof — Digitalização de documentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="login-screen" id="loginScreen">
+    <form class="login-card" id="loginForm">
+      <h1>Digi<span>Kof</span></h1>
+      <p class="login-sub">Acesso restrito · KOF</p>
+      <label for="loginUser">Usuário</label>
+      <input type="text" id="loginUser" autocomplete="username" required>
+      <label for="loginPass">Senha</label>
+      <input type="password" id="loginPass" autocomplete="current-password" required>
+      <div class="login-error" id="loginError" hidden></div>
+      <button type="submit" class="btn btn-primary" id="loginSubmit" style="justify-content:center;width:100%;margin-top:16px;">Entrar</button>
+    </form>
+  </div>
+
+  <div id="appShell" hidden>
+    <header id="topbar">
+      <div class="brand">
+        <h1>Digi<span>Kof</span></h1>
+        <small>documentos · KOF</small>
+      </div>
+      <div class="topbar-right">
+        <div class="status" id="connStatus" aria-live="polite"></div>
+        <button class="btn btn-ghost" id="logoutBtn" title="Sair">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+          Sair
+        </button>
+      </div>
+    </header>
+
+    <div class="layout" id="layout">
+      <aside class="pane pane-folders" id="paneFolders">
+        <div class="pane-inner">
+          <div class="section-head">
+            <h2>Suas pastas</h2>
+            <button class="btn btn-ghost" id="btnAddFolder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              Nova
+            </button>
+          </div>
+          <div id="foldersWrap"></div>
+        </div>
+      </aside>
+
+      <main class="pane pane-detail" id="paneDetail">
+        <div class="pane-inner">
+          <button class="crumb" id="backBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            Pastas
+          </button>
+          <div id="detailWrap"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <input type="file" id="fileInputCamera" accept="image/*" capture="environment">
+  <input type="file" id="fileInputUpload" accept="image/*" multiple>
+
+  <div id="modalRoot"></div>
+  <div id="toastRoot" aria-live="polite"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
